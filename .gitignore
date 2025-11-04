@@ -1,8 +1,33 @@
 venv/
+.venv/
+env/
+ENV/
 __pycache__/
 *.pyc
+.pyo
+.pyd
 .DS_Store
 .coverage
+.coveragerc
+coverage.xml
 .pytest_cache
 htmlcov
-logs/*
+logs/
+*.log
+
+# Python packaging
+*.egg-info/
+
+# Type checker cache
+.mypy_cache/
+
+# Editors/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Playwright artifacts
+playwright-report/
+test-results/
+.playwright/
