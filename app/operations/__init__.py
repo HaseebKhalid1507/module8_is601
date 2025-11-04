@@ -19,9 +19,13 @@ to perform arithmetic operations based on user input.
 """
 
 from typing import Union  # Import Union for type hinting multiple possible types
+import logging
 
 # Define a type alias for numbers that can be either int or float
 Number = Union[int, float]
+
+# Module logger
+logger = logging.getLogger("app.operations")
 
 def add(a: Number, b: Number) -> Number:
     """
@@ -40,8 +44,10 @@ def add(a: Number, b: Number) -> Number:
     >>> add(2.5, 3)
     5.5
     """
+    logger.debug("add called with a=%s, b=%s", a, b)
     # Perform addition of a and b
     result = a + b
+    logger.debug("add result=%s", result)
     return result
 
 def subtract(a: Number, b: Number) -> Number:
@@ -61,8 +67,10 @@ def subtract(a: Number, b: Number) -> Number:
     >>> subtract(5.5, 2)
     3.5
     """
+    logger.debug("subtract called with a=%s, b=%s", a, b)
     # Perform subtraction of b from a
     result = a - b
+    logger.debug("subtract result=%s", result)
     return result
 
 def multiply(a: Number, b: Number) -> Number:
@@ -82,8 +90,10 @@ def multiply(a: Number, b: Number) -> Number:
     >>> multiply(2.5, 4)
     10.0
     """
+    logger.debug("multiply called with a=%s, b=%s", a, b)
     # Perform multiplication of a and b
     result = a * b
+    logger.debug("multiply result=%s", result)
     return result
 
 def divide(a: Number, b: Number) -> float:
@@ -112,9 +122,12 @@ def divide(a: Number, b: Number) -> float:
     """
     # Check if the divisor is zero to prevent division by zero
     if b == 0:
+        logger.warning("divide attempted with division by zero: a=%s, b=%s", a, b)
         # Raise a ValueError with a descriptive message
         raise ValueError("Cannot divide by zero!")
     
     # Perform division of a by b and return the result as a float
+    logger.debug("divide called with a=%s, b=%s", a, b)
     result = a / b
+    logger.debug("divide result=%s", result)
     return result
