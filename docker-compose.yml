@@ -42,6 +42,56 @@ services:
       # - `--host 0.0.0.0`: Binds the server to all network interfaces, making it accessible externally.
       # - `--port 8000`: Sets the port on which the server will listen inside the container.
       # - `--reload`: Enables automatic reloading of the server when code changes are detected. This is particularly useful during development for immediate feedback without manual restarts.
+    
+    # Service Dependencies
+    depends_on:
+      - postgres  # Ensures that the postgres service starts before the web service.
+    
+    # Network Configuration
+    networks:
+      - app-network  # Connects the web service to the app-network, enabling communication with the postgres service.
+
+  # Service: postgres
+  postgres:
+    # Image Configuration
+    image: postgres:15-alpine  # Uses the official PostgreSQL 15 image with Alpine Linux for a lightweight container.
+    
+    # Container Naming
+    container_name: postgres_db  # Assigns a custom name "postgres_db" to the PostgreSQL container.
+    
+    # Port Mapping
+    ports:
+      - "5432:5432"  # Maps port 5432 on the host machine to port 5432 in the container, allowing access to PostgreSQL.
+    
+    # Environment Variables
+    environment:
+      - POSTGRES_USER=postgres  # Sets the PostgreSQL superuser username.
+      - POSTGRES_PASSWORD=postgres  # Sets the PostgreSQL superuser password. (Change this in production!)
+      - POSTGRES_DB=calculator_db  # Creates a database named "calculator_db" on initialization.
+    
+    # Volume Mounting for Data Persistence
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Mounts a named volume to persist database data across container restarts.
+    
+    # Network Configuration
+    networks:
+      - app-network  # Connects the postgres service to the app-network.
+    
+    # Health Check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]  # Checks if PostgreSQL is ready to accept connections.
+      interval: 10s  # Runs the health check every 10 seconds.
+      timeout: 5s  # Times out after 5 seconds if the check doesn't respond.
+      retries: 5  # Retries the health check 5 times before marking the service as unhealthy.
+
+# Networks Definition
+networks:
+  app-network:
+    driver: bridge  # Creates a bridge network for inter-service communication.
+
+# Volumes Definition
+volumes:
+  postgres_data:  # Named volume for persisting PostgreSQL data.
 
 # ---------------------------------------------
 # Detailed Explanation of Each Component
