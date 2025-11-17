@@ -9,10 +9,11 @@ These are example routes to demonstrate how to use the User model.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr, Field
 from typing import List
 from app.database import get_db
 from app.models import User
+from app.schemas import UserCreate, UserRead
+from app.schemas.user import UserLogin, UserUpdate
 from app.utils import hash_password, verify_password
 
 # Create a router for user-related endpoints
@@ -22,33 +23,8 @@ router = APIRouter(
 )
 
 
-# Pydantic schemas for request/response validation
-class UserCreate(BaseModel):
-    """Schema for creating a new user"""
-    username: str = Field(..., min_length=3, max_length=50, description="Username")
-    email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., min_length=8, description="Password (min 8 characters)")
-
-
-class UserResponse(BaseModel):
-    """Schema for user response (excludes password)"""
-    id: int
-    username: str
-    email: str
-    created_at: str
-    
-    class Config:
-        from_attributes = True  # Allows Pydantic to work with SQLAlchemy models
-
-
-class UserLogin(BaseModel):
-    """Schema for user login"""
-    username: str = Field(..., description="Username or email")
-    password: str = Field(..., description="Password")
-
-
 # Routes
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     """
     Create a new user.
@@ -94,7 +70,7 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     return new_user.to_dict()
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/", response_model=List[UserRead])
 def get_all_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     Get all users (paginated).
@@ -105,13 +81,13 @@ def get_all_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
         db: Database session dependency
         
     Returns:
-        List[UserResponse]: List of users (without passwords)
+        List[UserRead]: List of users (without passwords)
     """
     users = db.query(User).offset(skip).limit(limit).all()
     return [user.to_dict() for user in users]
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=UserRead)
 def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
     """
     Get a specific user by ID.
@@ -121,7 +97,7 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
         db: Database session dependency
         
     Returns:
-        UserResponse: The user details (without password)
+        UserRead: The user details (without password)
         
     Raises:
         HTTPException: If user not found
