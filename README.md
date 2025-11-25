@@ -246,12 +246,69 @@ Then submit the GitHub repository link as instructed.
 
 ---
 
+# 🧪 Running Tests
+
+This project includes comprehensive tests for the calculator operations and the new Calculation model with SQLAlchemy.
+
+## Run All Tests
+
+```bash
+pytest
+```
+
+## Run Specific Test Suites
+
+**Calculator Tests:**
+```bash
+pytest tests/unit/test_calculator.py -v
+```
+
+**Calculation Model Tests:**
+```bash
+# Unit tests (factory pattern + schema validation)
+pytest tests/unit/test_calculation.py -v
+
+# Integration tests (database persistence)
+pytest tests/integration/test_calculation_db.py -v
+```
+
+## Run with Coverage Report
+
+```bash
+pytest --cov=app --cov-report=html
+```
+
+View the coverage report by opening `htmlcov/index.html` in your browser.
+
+---
+
+# 🐳 Docker Hub Repository
+
+The FastAPI Calculator application is available on Docker Hub:
+
+**Repository:** [ogsizzle/fastapi-calculator](https://hub.docker.com/r/ogsizzle/fastapi-calculator)
+
+**Pull the image:**
+```bash
+docker pull ogsizzle/fastapi-calculator:latest
+```
+
+**Run the container:**
+```bash
+docker run -p 8000:8000 ogsizzle/fastapi-calculator:latest
+```
+
+Then visit `http://localhost:8000` in your browser.
+
+---
+
 # 📋 Notes
 
 - Install **Homebrew** first on Mac.
 - Install and configure **Git** and **SSH** before cloning.
 - Use **Python 3.10+** and **virtual environments** for Python projects.
 - **Docker** is optional depending on the project.
+- Run tests with **pytest** to validate functionality.
 
 ---
 
@@ -262,3 +319,4 @@ Then submit the GitHub repository link as instructed.
 - [Python Downloads](https://www.python.org/downloads/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [GitHub SSH Setup Guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+- [Docker Hub Repository](https://hub.docker.com/r/ogsizzle/fastapi-calculator)
