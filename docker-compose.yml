@@ -61,7 +61,7 @@ services:
     
     # Port Mapping
     ports:
-      - "5432:5432"  # Maps port 5432 on the host machine to port 5432 in the container, allowing access to PostgreSQL.
+      - "5433:5432"  # Maps port 5433 on the host machine to port 5432 in the container, allowing access to PostgreSQL. (Changed from 5432 to avoid conflict with other PostgreSQL instances)
     
     # Environment Variables
     environment:
@@ -71,7 +71,7 @@ services:
     
     # Volume Mounting for Data Persistence
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Mounts a named volume to persist database data across container restarts.
+      - calculator_postgres_data:/var/lib/postgresql/data  # Mounts a named volume to persist database data across container restarts.
     
     # Network Configuration
     networks:
@@ -91,7 +91,7 @@ networks:
 
 # Volumes Definition
 volumes:
-  postgres_data:  # Named volume for persisting PostgreSQL data.
+  calculator_postgres_data:  # Named volume for persisting PostgreSQL data for the calculator app.
 
 # ---------------------------------------------
 # Detailed Explanation of Each Component
