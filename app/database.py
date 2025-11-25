@@ -12,3 +12,11 @@ Base = declarative_base()
 def create_tables():
     """Create tables for the application (convenience helper for tests)."""
     Base.metadata.create_all(bind=engine)
+
+def get_db():
+    """Dependency for FastAPI routes to get database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
