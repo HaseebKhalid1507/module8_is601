@@ -14,7 +14,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas import UserCreate, UserRead
 from app.schemas.user import UserLogin, UserUpdate
-from app.utils import hash_password, verify_password
+from app.utils import hash_password, verify_password, create_access_token, TokenWithUser
 
 # Create a router for user-related endpoints
 router = APIRouter(
@@ -24,18 +24,18 @@ router = APIRouter(
 
 
 # Routes
-@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=TokenWithUser, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TokenWithUser, status_code=status.HTTP_201_CREATED)
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     """
-    Create a new user.
+    Create a new user and return JWT token.
     
     Args:
         user_data: User registration data (username, email, password)
         db: Database session dependency
         
     Returns:
-        UserResponse: The created user (without password)
+        TokenWithUser: JWT token with user info
         
     Raises:
         HTTPException: If username or email already exists
@@ -68,7 +68,18 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     
-    return new_user.to_dict()
+    # Generate JWT token
+    access_token = create_access_token(
+        data={"sub": new_user.username, "user_id": new_user.id}
+    )
+    
+    return TokenWithUser(
+        access_token=access_token,
+        token_type="bearer",
+        user_id=new_user.id,
+        username=new_user.username,
+        email=new_user.email
+    )
 
 
 @router.get("/", response_model=List[UserRead])
@@ -112,20 +123,20 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
     return user.to_dict()
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenWithUser)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """
-    Authenticate a user.
+    Authenticate a user and return JWT token.
     
     Args:
         credentials: Login credentials (username/email and password)
         db: Database session dependency
         
     Returns:
-        dict: Success message and user info (in production, return JWT token)
+        TokenWithUser: JWT token with user info
         
     Raises:
-        HTTPException: If credentials are invalid
+        HTTPException: If credentials are invalid (401 Unauthorized)
     """
     # Find user by username or email
     user = db.query(User).filter(
@@ -135,21 +146,30 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"}
         )
     
     # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"}
         )
     
-    # In production, generate and return JWT token here
-    return {
-        "message": "Login successful",
-        "user": user.to_dict()
-    }
+    # Generate JWT token
+    access_token = create_access_token(
+        data={"sub": user.username, "user_id": user.id}
+    )
+    
+    return TokenWithUser(
+        access_token=access_token,
+        token_type="bearer",
+        user_id=user.id,
+        username=user.username,
+        email=user.email
+    )
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

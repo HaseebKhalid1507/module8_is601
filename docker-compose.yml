@@ -34,6 +34,8 @@ services:
       - PYTHONDONTWRITEBYTECODE=1  # Prevents Python from writing `.pyc` files to disk. This ensures that only source code is maintained, keeping the container clean.
       - PYTHONUNBUFFERED=1  # Forces Python to flush the output buffer immediately. This is useful for real-time logging, ensuring that logs are visible as they are generated.
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/calculator_db  # PostgreSQL connection string
+      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production  # JWT signing key
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30  # Token expiration time in minutes
     
     # Command Execution
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload  

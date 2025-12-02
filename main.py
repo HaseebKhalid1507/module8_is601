@@ -135,6 +135,25 @@ async def read_root(request: Request):
     logger.debug("Rendering index template for %s", request.client.host if request.client else "unknown")
     return templates.TemplateResponse("index.html", {"request": request})
 
+
+@app.get("/login")
+async def login_page(request: Request):
+    """
+    Serve the login.html template.
+    """
+    logger.debug("Rendering login template for %s", request.client.host if request.client else "unknown")
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.get("/register")
+async def register_page(request: Request):
+    """
+    Serve the register.html template.
+    """
+    logger.debug("Rendering register template for %s", request.client.host if request.client else "unknown")
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
 @app.post("/add", response_model=OperationResponse, responses={400: {"model": ErrorResponse}})
 async def add_route(operation: OperationRequest):
     """
