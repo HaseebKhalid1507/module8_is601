@@ -100,11 +100,102 @@ fi
 
 echo ""
 echo "=========================================="
+echo "Calculation BREAD Endpoints Test"
+echo "=========================================="
+
+echo ""
+echo "9. Testing POST /calculations (Add)"
+echo "-------------------------------------------"
+ADD_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -d '{"a": 10, "b": 5, "type": "Add"}')
+echo "Request: POST /calculations/"
+echo "Body: {\"a\": 10, \"b\": 5, \"type\": \"Add\"}"
+echo "Response: ${ADD_CALC}"
+CALC_ID=$(echo $ADD_CALC | grep -o '"id":[0-9]*' | grep -o '[0-9]*')
+echo "Created Calculation ID: ${CALC_ID}"
+
+echo ""
+echo "10. Testing GET /calculations (Browse)"
+echo "-------------------------------------------"
+BROWSE_CALC=$(curl -s -X GET "${BASE_URL}/calculations/")
+echo "Request: GET /calculations/"
+echo "Response: ${BROWSE_CALC}"
+
+echo ""
+echo "11. Testing GET /calculations/{id} (Read)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  READ_CALC=$(curl -s -X GET "${BASE_URL}/calculations/${CALC_ID}")
+  echo "Request: GET /calculations/${CALC_ID}"
+  echo "Response: ${READ_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "12. Testing PUT /calculations/{id} (Edit)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  EDIT_CALC=$(curl -s -X PUT "${BASE_URL}/calculations/${CALC_ID}" \
+    -H "Content-Type: application/json" \
+    -d '{"a": 20, "b": 4, "type": "Multiply"}')
+  echo "Request: PUT /calculations/${CALC_ID}"
+  echo "Body: {\"a\": 20, \"b\": 4, \"type\": \"Multiply\"}"
+  echo "Response: ${EDIT_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "13. Testing POST /calculations (Divide)"
+echo "-------------------------------------------"
+DIV_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -d '{"a": 100, "b": 5, "type": "Divide"}')
+echo "Request: POST /calculations/"
+echo "Body: {\"a\": 100, \"b\": 5, \"type\": \"Divide\"}"
+echo "Response: ${DIV_CALC}"
+
+echo ""
+echo "14. Testing POST /calculations (Divide by zero - should fail)"
+echo "-------------------------------------------"
+DIV_ZERO_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -d '{"a": 10, "b": 0, "type": "Divide"}')
+echo "Request: POST /calculations/"
+echo "Body: {\"a\": 10, \"b\": 0, \"type\": \"Divide\"}"
+echo "Response: ${DIV_ZERO_CALC}"
+
+echo ""
+echo "15. Testing DELETE /calculations/{id}"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  DELETE_CALC=$(curl -s -w "\nHTTP Status: %{http_code}" -X DELETE "${BASE_URL}/calculations/${CALC_ID}")
+  echo "Request: DELETE /calculations/${CALC_ID}"
+  echo "Response: ${DELETE_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "16. Testing GET /calculations/{id} (after deletion - should 404)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  GET_DELETED_CALC=$(curl -s -X GET "${BASE_URL}/calculations/${CALC_ID}")
+  echo "Request: GET /calculations/${CALC_ID}"
+  echo "Response: ${GET_DELETED_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "=========================================="
 echo "Calculator Endpoints Test"
 echo "=========================================="
 
 echo ""
-echo "9. Testing POST /add"
+echo "17. Testing POST /add"
 echo "-------------------------------------------"
 ADD_RESPONSE=$(curl -s -X POST "${BASE_URL}/add" \
   -H "Content-Type: application/json" \
@@ -114,7 +205,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${ADD_RESPONSE}"
 
 echo ""
-echo "10. Testing POST /subtract"
+echo "18. Testing POST /subtract"
 echo "-------------------------------------------"
 SUB_RESPONSE=$(curl -s -X POST "${BASE_URL}/subtract" \
   -H "Content-Type: application/json" \
@@ -124,7 +215,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${SUB_RESPONSE}"
 
 echo ""
-echo "11. Testing POST /multiply"
+echo "19. Testing POST /multiply"
 echo "-------------------------------------------"
 MUL_RESPONSE=$(curl -s -X POST "${BASE_URL}/multiply" \
   -H "Content-Type: application/json" \
@@ -134,7 +225,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${MUL_RESPONSE}"
 
 echo ""
-echo "12. Testing POST /divide"
+echo "20. Testing POST /divide"
 echo "-------------------------------------------"
 DIV_RESPONSE=$(curl -s -X POST "${BASE_URL}/divide" \
   -H "Content-Type: application/json" \
@@ -144,7 +235,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${DIV_RESPONSE}"
 
 echo ""
-echo "13. Testing POST /divide (division by zero)"
+echo "21. Testing POST /divide (division by zero)"
 echo "-------------------------------------------"
 DIV_ZERO=$(curl -s -X POST "${BASE_URL}/divide" \
   -H "Content-Type: application/json" \
