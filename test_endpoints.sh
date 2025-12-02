@@ -16,7 +16,7 @@ EMAIL="test_${TIMESTAMP}@example.com"
 PASSWORD="password123"
 
 echo ""
-echo "1. Testing POST /users/register"
+echo "1. Testing POST /users/register (returns JWT)"
 echo "-------------------------------------------"
 REGISTER_RESPONSE=$(curl -s -X POST "${BASE_URL}/users/register" \
   -H "Content-Type: application/json" \
@@ -25,12 +25,14 @@ echo "Request: POST /users/register"
 echo "Body: {\"username\": \"${USERNAME}\", \"email\": \"${EMAIL}\", \"password\": \"${PASSWORD}\"}"
 echo "Response: ${REGISTER_RESPONSE}"
 
-# Extract user ID from response
-USER_ID=$(echo $REGISTER_RESPONSE | grep -o '"id":[0-9]*' | grep -o '[0-9]*')
+# Extract user ID and token from response
+USER_ID=$(echo $REGISTER_RESPONSE | grep -o '"user_id":[0-9]*' | grep -o '[0-9]*')
+ACCESS_TOKEN=$(echo $REGISTER_RESPONSE | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
 echo "Created User ID: ${USER_ID}"
+echo "Access Token: ${ACCESS_TOKEN:0:50}..."
 
 echo ""
-echo "2. Testing POST /users/login (valid credentials)"
+echo "2. Testing POST /users/login (valid credentials - returns JWT)"
 echo "-------------------------------------------"
 LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/users/login" \
   -H "Content-Type: application/json" \
@@ -38,9 +40,11 @@ LOGIN_RESPONSE=$(curl -s -X POST "${BASE_URL}/users/login" \
 echo "Request: POST /users/login"
 echo "Body: {\"username\": \"${USERNAME}\", \"password\": \"${PASSWORD}\"}"
 echo "Response: ${LOGIN_RESPONSE}"
+LOGIN_TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+echo "Login Token: ${LOGIN_TOKEN:0:50}..."
 
 echo ""
-echo "3. Testing POST /users/login (invalid credentials)"
+echo "3. Testing POST /users/login (invalid credentials - 401)"
 echo "-------------------------------------------"
 INVALID_LOGIN=$(curl -s -X POST "${BASE_URL}/users/login" \
   -H "Content-Type: application/json" \
@@ -77,7 +81,120 @@ echo "Request: POST /users/register (duplicate username)"
 echo "Response: ${DUP_RESPONSE}"
 
 echo ""
-echo "7. Testing DELETE /users/{id}"
+echo "=========================================="
+echo "Calculation BREAD Endpoints Test (Protected)"
+echo "=========================================="
+
+echo ""
+echo "7. Testing POST /calculations WITHOUT token (should fail 401)"
+echo "-------------------------------------------"
+NO_AUTH_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -d '{"a": 10, "b": 5, "type": "Add"}')
+echo "Request: POST /calculations/ (no auth)"
+echo "Response: ${NO_AUTH_CALC}"
+
+echo ""
+echo "8. Testing POST /calculations WITH token (Add)"
+echo "-------------------------------------------"
+ADD_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -d '{"a": 10, "b": 5, "type": "Add"}')
+echo "Request: POST /calculations/"
+echo "Body: {\"a\": 10, \"b\": 5, \"type\": \"Add\"}"
+echo "Response: ${ADD_CALC}"
+CALC_ID=$(echo $ADD_CALC | grep -o '"id":[0-9]*' | grep -o '[0-9]*')
+echo "Created Calculation ID: ${CALC_ID}"
+
+echo ""
+echo "9. Testing GET /calculations (Browse with token)"
+echo "-------------------------------------------"
+BROWSE_CALC=$(curl -s -X GET "${BASE_URL}/calculations/" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}")
+echo "Request: GET /calculations/"
+echo "Response: ${BROWSE_CALC}"
+
+echo ""
+echo "10. Testing GET /calculations/{id} (Read with token)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  READ_CALC=$(curl -s -X GET "${BASE_URL}/calculations/${CALC_ID}" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}")
+  echo "Request: GET /calculations/${CALC_ID}"
+  echo "Response: ${READ_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "11. Testing PUT /calculations/{id} (Edit with token)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  EDIT_CALC=$(curl -s -X PUT "${BASE_URL}/calculations/${CALC_ID}" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -d '{"a": 20, "b": 4, "type": "Multiply"}')
+  echo "Request: PUT /calculations/${CALC_ID}"
+  echo "Body: {\"a\": 20, \"b\": 4, \"type\": \"Multiply\"}"
+  echo "Response: ${EDIT_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "12. Testing POST /calculations (Divide with token)"
+echo "-------------------------------------------"
+DIV_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -d '{"a": 100, "b": 5, "type": "Divide"}')
+echo "Request: POST /calculations/"
+echo "Body: {\"a\": 100, \"b\": 5, \"type\": \"Divide\"}"
+echo "Response: ${DIV_CALC}"
+
+echo ""
+echo "13. Testing POST /calculations (Divide by zero - should fail)"
+echo "-------------------------------------------"
+DIV_ZERO_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -d '{"a": 10, "b": 0, "type": "Divide"}')
+echo "Request: POST /calculations/"
+echo "Body: {\"a\": 10, \"b\": 0, \"type\": \"Divide\"}"
+echo "Response: ${DIV_ZERO_CALC}"
+
+echo ""
+echo "14. Testing DELETE /calculations/{id} (with token)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  DELETE_CALC=$(curl -s -w "\nHTTP Status: %{http_code}" -X DELETE "${BASE_URL}/calculations/${CALC_ID}" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}")
+  echo "Request: DELETE /calculations/${CALC_ID}"
+  echo "Response: ${DELETE_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "15. Testing GET /calculations/{id} (after deletion - should 404)"
+echo "-------------------------------------------"
+if [ -n "$CALC_ID" ]; then
+  GET_DELETED_CALC=$(curl -s -X GET "${BASE_URL}/calculations/${CALC_ID}" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}")
+  echo "Request: GET /calculations/${CALC_ID}"
+  echo "Response: ${GET_DELETED_CALC}"
+else
+  echo "Skipped - No calculation ID available"
+fi
+
+echo ""
+echo "=========================================="
+echo "User Deletion Tests (After Calculations)"
+echo "==========================================" 
+
+echo ""
+echo "16. Testing DELETE /users/{id}"
 echo "-------------------------------------------"
 if [ -n "$USER_ID" ]; then
   DELETE_RESPONSE=$(curl -s -w "\nHTTP Status: %{http_code}" -X DELETE "${BASE_URL}/users/${USER_ID}")
@@ -88,7 +205,7 @@ else
 fi
 
 echo ""
-echo "8. Testing GET /users/{id} (after deletion - should 404)"
+echo "17. Testing GET /users/{id} (after deletion - should 404)"
 echo "-------------------------------------------"
 if [ -n "$USER_ID" ]; then
   GET_DELETED=$(curl -s -X GET "${BASE_URL}/users/${USER_ID}")
@@ -100,102 +217,11 @@ fi
 
 echo ""
 echo "=========================================="
-echo "Calculation BREAD Endpoints Test"
+echo "Calculator Endpoints Test (Public)"
 echo "=========================================="
 
 echo ""
-echo "9. Testing POST /calculations (Add)"
-echo "-------------------------------------------"
-ADD_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
-  -H "Content-Type: application/json" \
-  -d '{"a": 10, "b": 5, "type": "Add"}')
-echo "Request: POST /calculations/"
-echo "Body: {\"a\": 10, \"b\": 5, \"type\": \"Add\"}"
-echo "Response: ${ADD_CALC}"
-CALC_ID=$(echo $ADD_CALC | grep -o '"id":[0-9]*' | grep -o '[0-9]*')
-echo "Created Calculation ID: ${CALC_ID}"
-
-echo ""
-echo "10. Testing GET /calculations (Browse)"
-echo "-------------------------------------------"
-BROWSE_CALC=$(curl -s -X GET "${BASE_URL}/calculations/")
-echo "Request: GET /calculations/"
-echo "Response: ${BROWSE_CALC}"
-
-echo ""
-echo "11. Testing GET /calculations/{id} (Read)"
-echo "-------------------------------------------"
-if [ -n "$CALC_ID" ]; then
-  READ_CALC=$(curl -s -X GET "${BASE_URL}/calculations/${CALC_ID}")
-  echo "Request: GET /calculations/${CALC_ID}"
-  echo "Response: ${READ_CALC}"
-else
-  echo "Skipped - No calculation ID available"
-fi
-
-echo ""
-echo "12. Testing PUT /calculations/{id} (Edit)"
-echo "-------------------------------------------"
-if [ -n "$CALC_ID" ]; then
-  EDIT_CALC=$(curl -s -X PUT "${BASE_URL}/calculations/${CALC_ID}" \
-    -H "Content-Type: application/json" \
-    -d '{"a": 20, "b": 4, "type": "Multiply"}')
-  echo "Request: PUT /calculations/${CALC_ID}"
-  echo "Body: {\"a\": 20, \"b\": 4, \"type\": \"Multiply\"}"
-  echo "Response: ${EDIT_CALC}"
-else
-  echo "Skipped - No calculation ID available"
-fi
-
-echo ""
-echo "13. Testing POST /calculations (Divide)"
-echo "-------------------------------------------"
-DIV_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
-  -H "Content-Type: application/json" \
-  -d '{"a": 100, "b": 5, "type": "Divide"}')
-echo "Request: POST /calculations/"
-echo "Body: {\"a\": 100, \"b\": 5, \"type\": \"Divide\"}"
-echo "Response: ${DIV_CALC}"
-
-echo ""
-echo "14. Testing POST /calculations (Divide by zero - should fail)"
-echo "-------------------------------------------"
-DIV_ZERO_CALC=$(curl -s -X POST "${BASE_URL}/calculations/" \
-  -H "Content-Type: application/json" \
-  -d '{"a": 10, "b": 0, "type": "Divide"}')
-echo "Request: POST /calculations/"
-echo "Body: {\"a\": 10, \"b\": 0, \"type\": \"Divide\"}"
-echo "Response: ${DIV_ZERO_CALC}"
-
-echo ""
-echo "15. Testing DELETE /calculations/{id}"
-echo "-------------------------------------------"
-if [ -n "$CALC_ID" ]; then
-  DELETE_CALC=$(curl -s -w "\nHTTP Status: %{http_code}" -X DELETE "${BASE_URL}/calculations/${CALC_ID}")
-  echo "Request: DELETE /calculations/${CALC_ID}"
-  echo "Response: ${DELETE_CALC}"
-else
-  echo "Skipped - No calculation ID available"
-fi
-
-echo ""
-echo "16. Testing GET /calculations/{id} (after deletion - should 404)"
-echo "-------------------------------------------"
-if [ -n "$CALC_ID" ]; then
-  GET_DELETED_CALC=$(curl -s -X GET "${BASE_URL}/calculations/${CALC_ID}")
-  echo "Request: GET /calculations/${CALC_ID}"
-  echo "Response: ${GET_DELETED_CALC}"
-else
-  echo "Skipped - No calculation ID available"
-fi
-
-echo ""
-echo "=========================================="
-echo "Calculator Endpoints Test"
-echo "=========================================="
-
-echo ""
-echo "17. Testing POST /add"
+echo "18. Testing POST /add"
 echo "-------------------------------------------"
 ADD_RESPONSE=$(curl -s -X POST "${BASE_URL}/add" \
   -H "Content-Type: application/json" \
@@ -205,7 +231,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${ADD_RESPONSE}"
 
 echo ""
-echo "18. Testing POST /subtract"
+echo "19. Testing POST /subtract"
 echo "-------------------------------------------"
 SUB_RESPONSE=$(curl -s -X POST "${BASE_URL}/subtract" \
   -H "Content-Type: application/json" \
@@ -215,7 +241,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${SUB_RESPONSE}"
 
 echo ""
-echo "19. Testing POST /multiply"
+echo "20. Testing POST /multiply"
 echo "-------------------------------------------"
 MUL_RESPONSE=$(curl -s -X POST "${BASE_URL}/multiply" \
   -H "Content-Type: application/json" \
@@ -225,7 +251,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${MUL_RESPONSE}"
 
 echo ""
-echo "20. Testing POST /divide"
+echo "21. Testing POST /divide"
 echo "-------------------------------------------"
 DIV_RESPONSE=$(curl -s -X POST "${BASE_URL}/divide" \
   -H "Content-Type: application/json" \
@@ -235,7 +261,7 @@ echo "Body: {\"a\": 10, \"b\": 5}"
 echo "Response: ${DIV_RESPONSE}"
 
 echo ""
-echo "21. Testing POST /divide (division by zero)"
+echo "22. Testing POST /divide (division by zero)"
 echo "-------------------------------------------"
 DIV_ZERO=$(curl -s -X POST "${BASE_URL}/divide" \
   -H "Content-Type: application/json" \

@@ -44,10 +44,19 @@ jobs:
         run: |
           python -m playwright install --with-deps chromium
 
+      - name: Start FastAPI server
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          JWT_SECRET_KEY: test-secret-key-for-ci
+        run: |
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          sleep 5  # Wait for server to start
+
       - name: Run tests (pytest)
         env:
           PYTHONUNBUFFERED: '1'
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          JWT_SECRET_KEY: test-secret-key-for-ci
         run: |
           pytest -q
 
