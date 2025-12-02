@@ -24,6 +24,7 @@ router = APIRouter(
 
 
 # Routes
+@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     """
