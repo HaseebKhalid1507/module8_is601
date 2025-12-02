@@ -6,6 +6,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, field_validator  # Use @validator for Pydantic 1.x
 from fastapi.exceptions import RequestValidationError
 from app.operations import add, subtract, multiply, divide  # Ensure correct import path
+from app.routes.users import router as users_router  # Import user routes
+from app.database import create_tables  # Import table creation function
 import uvicorn
 import logging
 import logging.config
@@ -14,7 +16,41 @@ import time
 
 # Setup logging configuration (console + file)
 def setup_logging() -> None:
-    os.makedirs("logs", exist_ok=True)
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Check if we can write to the logs directory
+    log_file = os.path.join(log_dir, "app.log")
+    can_write_file = True
+    try:
+        with open(log_file, 'a'):
+            pass
+    except (IOError, PermissionError):
+        can_write_file = False
+    
+    handlers_config = {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "level": "INFO",
+            "stream": "ext://sys.stdout",
+        },
+    }
+    
+    # Only add file handler if we can write to the log file
+    if can_write_file:
+        handlers_config["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "standard",
+            "level": "INFO",
+            "filename": log_file,
+            "maxBytes": 2 * 1024 * 1024,  # 2MB
+            "backupCount": 3,
+            "encoding": "utf-8",
+        }
+    
+    handler_list = ["console", "file"] if can_write_file else ["console"]
+    
     logging.config.dictConfig(
         {
             "version": 1,
@@ -25,31 +61,15 @@ def setup_logging() -> None:
                     "datefmt": "%Y-%m-%d %H:%M:%S",
                 }
             },
-            "handlers": {
-                "console": {
-                    "class": "logging.StreamHandler",
-                    "formatter": "standard",
-                    "level": "INFO",
-                    "stream": "ext://sys.stdout",
-                },
-                "file": {
-                    "class": "logging.handlers.RotatingFileHandler",
-                    "formatter": "standard",
-                    "level": "INFO",
-                    "filename": "logs/app.log",
-                    "maxBytes": 2 * 1024 * 1024,  # 2MB
-                    "backupCount": 3,
-                    "encoding": "utf-8",
-                },
-            },
+            "handlers": handlers_config,
             "loggers": {
-                "uvicorn": {"level": "INFO", "handlers": ["console", "file"], "propagate": False},
-                "uvicorn.access": {"level": "INFO", "handlers": ["console", "file"], "propagate": False},
-                "app": {"level": "INFO", "handlers": ["console", "file"], "propagate": False},
+                "uvicorn": {"level": "INFO", "handlers": handler_list, "propagate": False},
+                "uvicorn.access": {"level": "INFO", "handlers": handler_list, "propagate": False},
+                "app": {"level": "INFO", "handlers": handler_list, "propagate": False},
                 # Detailed function-level logs for operations
-                "app.operations": {"level": "DEBUG", "handlers": ["console", "file"], "propagate": False},
+                "app.operations": {"level": "DEBUG", "handlers": handler_list, "propagate": False},
             },
-            "root": {"level": "INFO", "handlers": ["console", "file"]},
+            "root": {"level": "INFO", "handlers": handler_list},
         }
     )
 
@@ -58,6 +78,9 @@ setup_logging()
 logger = logging.getLogger("app.main")
 
 app = FastAPI()
+
+# Include user routes
+app.include_router(users_router)
 
 # Setup templates directory
 templates = Jinja2Templates(directory="templates")
@@ -186,6 +209,9 @@ async def log_requests(request: Request, call_next):
 
 @app.on_event("startup")
 async def on_startup():
+    # Create database tables on startup
+    create_tables()
+    logger.info("Database tables created")
     logger.info("Application startup complete")
 
 
