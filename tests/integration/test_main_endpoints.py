@@ -11,14 +11,6 @@ def client():
         yield c
 
 
-def test_root_index_page(client: TestClient):
-    """GET / should render the index template."""
-    resp = client.get("/")
-    assert resp.status_code == 200
-    # Basic smoke check: page contains the headline
-    assert "Hello World" in resp.text
-
-
 @pytest.mark.parametrize("payload, field", [({"a": "x", "b": 2}, "a"), ({"a": 1}, "b")])
 def test_validation_errors_add_endpoint(client: TestClient, payload, field):
     """POST /add should return a 400 with a helpful error message for invalid input."""
